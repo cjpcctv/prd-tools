@@ -2,6 +2,11 @@
 
 > 遵循 [Keep a Changelog](https://keepachangelog.com/) 格式。架构决策详见 [docs/adr/](docs/adr/)。
 
+## [2.19.10] - 2026-05-20
+
+### Changed
+- refactor: plan §3 去掉当前代码/目标代码，改为参考文件+注意事项
+
 ## [2.19.9] - 2026-05-14
 
 ### Fixed
