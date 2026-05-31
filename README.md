@@ -8,12 +8,19 @@ PRD Tools 把 PRD 从"自然语言需求"转成"有证据、可执行、可测�
 # 1. 安装（指定目标项目目录）
 curl -fsSL https://raw.githubusercontent.com/zachary-lz-glm/prd-tools/v2.0/install.sh | bash -s /path/to/project
 
-# 2. 重启 Claude Code，然后构建项目知识库
-/reference
+# 2. 准备上下文材料（重要！）
+#    在目标项目根目录创建 prd-docs/，放入历史 PRD、技术方案、接口文档等
+mkdir /path/to/project/prd-docs
+#    把 .md / .docx / .txt 格式的历史文档放进去，2-3 个即可
 
-# 3. 蒸馏一个新 PRD
+# 3. 重启 Claude Code，然后构建项目知识库
+/reference    # 首次使用选 Mode F（上下文收集）→ Mode A（全量构建）
+
+# 4. 蒸馏一个新 PRD
 /prd-distill path/to/prd.md
 ```
+
+> **首次使用务必走 F→A 流程。** 跳过上下文收集直接全量构建，产出质量会显著下降。`prd-docs/` 里的历史文档是 reference 构建的核心输入——没有它们，工具只能依赖源码推断，容易产出低置信度结论。
 
 `/prd-distill` 会自动走完 Ingestion → Evidence → Requirement IR → Code Search → Contract Delta → Report，生成 `report.md` 后暂停等用户确认。用户 approved 后继续生成 `plan.md`。
 
@@ -25,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/zachary-lz-glm/prd-tools/v2.0/insta
 
 | Skill | 做什么 | 什么时候用 |
 |---|---|---|
-| `/reference` | 扫描项目源码、历史 PRD、技术方案，构建 `_prd-tools/reference/` 知识库 | 首次接入、项目结构大变、需求结束后回流新知识 |
+| `/reference` | 扫描项目源码 + `prd-docs/` 中的历史 PRD 和技术方案，构建 `_prd-tools/reference/` 知识库 | 首次接入（先创建 `prd-docs/`）、项目结构大变、需求结束后回流新知识 |
 | `/prd-distill` | 读取 PRD + 知识库 + 源码，输出结构化分析报告和开发计划 | 每次拿到新 PRD 时 |
 
 详细使用说明见 [`plugins/reference/README.md`](plugins/reference/README.md) 和 [`plugins/prd-distill/README.md`](plugins/prd-distill/README.md)。
@@ -132,10 +139,11 @@ PRD Tools 不把"前端/BFF/后端"写死成固定目录结构，而是通过**�
 
 **首次接入**：
 
-1. 安装 PRD Tools，准备 1-3 个历史 PRD 和技术方案。
-2. `/reference` Mode F（上下文收集）→ Mode A（全量构建）。
-3. Mode B2（健康检查）+ Mode C（质量门控）。
-4. 用一个新 PRD 运行 `/prd-distill`，检查输出质量。
+1. 安装 PRD Tools。
+2. 在项目根目录创建 `prd-docs/`，放入 2-3 个历史 PRD（`.md`/`.docx`/`.txt`）和对应的技术方案、接口文档。材料越充分，reference 质量越高。
+3. `/reference` Mode F（上下文收集，消费 `prd-docs/` 中的材料）→ Mode A（全量构建）。
+4. Mode B2（健康检查）+ Mode C（质量门控）。
+5. 用一个新 PRD 运行 `/prd-distill`，检查输出质量。
 
 **日常使用**：
 

@@ -22,7 +22,7 @@ prd-tools 负责 PRD-to-code 全链路的发现、证据治理和质量门控，
 
 | Phase | 名称 | 输入 | 输出 |
 |---|---|---|---|
-| 1 | 上下文收集 | 历史 PRD、技术方案、分支 diff、发布/返工记录 | `_prd-tools/build/context-enrichment.yaml` |
+| 1 | 上下文收集 | `prd-docs/` 自动发现 + 历史 PRD、技术方案、分支 diff、发布/返工记录 | `_prd-tools/build/context-enrichment.yaml` |
 | 2 | 结构扫描 | 项目目录、核心源码、git 历史 | `_prd-tools/build/modules-index.yaml` |
 | 3 | 深度分析 | modules-index、源码、能力面适配器 | `_prd-tools/reference/` v4.0 |
 | 4 | 质量门控 | reference、源码、样例需求 | `_prd-tools/build/quality-report.yaml` |
@@ -33,9 +33,9 @@ prd-tools 负责 PRD-to-code 全链路的发现、证据治理和质量门控，
 
 用于提升 reference 的业务价值，尤其适合团队首次建设。
 
-收集 1~3 个历史需求，每个需求尽量包含：
+先扫描项目根目录 `prd-docs/`，自动发现历史文档。不足时再向用户收集。每个需求尽量包含：
 
-- PRD / 技术方案 / 接口文档路径
+- PRD / 技术方案 / 接口文档路径（`prd-docs/` 中的文件自动计入）
 - 前端、BFF、后端代码库路径和分支
 - 已知返工、线上问题、CR 争议点
 

@@ -27,6 +27,11 @@ description: 将 PRD、需求文本或技术方案蒸馏为有证据支撑的 re
 
 不触发：直接改代码、无可分析输入、用户明确不要分析。
 
+## 前置条件
+
+- 项目必须已有 `_prd-tools/reference/` 知识库（通过 `/reference` 构建）。没有 reference 时置信度强制降为 `low`。
+- 首次使用请先完成 `/reference` 的 Mode F → Mode A 流程（需要提前在项目根目录创建 `prd-docs/` 放入历史 PRD 和技术方案）。
+
 ## 输入
 
 - PRD：`.md`/`.txt`/`.docx` 或粘贴文本。

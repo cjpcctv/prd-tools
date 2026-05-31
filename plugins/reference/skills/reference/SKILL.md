@@ -36,11 +36,17 @@ description: 为前端、BFF、后端通用的 PRD-to-code 工作流构建、更
 
 团队模式（Mode T 收集）详见 `/team-reference`。
 
+## 前置准备
+
+首次构建前，在项目根目录创建 `prd-docs/`，放入 2-3 个历史 PRD（`.md`/`.docx`/`.txt`）和对应的技术方案、接口文档。这些材料是 Mode F 上下文收集的核心输入，跳过会导致产出大量低置信度结论。
+
+首次使用务必走 **Mode F（上下文收集）→ Mode A（全量构建）** 流程，不要直接全量构建。
+
 ## 输入
 
 - 当前项目路径。
 - 可选层级提示：`frontend | bff | backend | multi-layer`。
-- 历史 PRD、技术方案、接口文档、分支 diff。
+- `prd-docs/` 目录中的历史 PRD、技术方案、接口文档（强烈建议）。
 - 已有 `_prd-tools/reference/` 和 `_prd-tools/build/`。
 
 无历史样例时也可构建，但标注业务语义低置信度。
