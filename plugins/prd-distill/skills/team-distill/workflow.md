@@ -194,6 +194,39 @@ suspected_missing_fanout: []   # consumer_orphan 推断出的疑似漏 fan-out �
 
 如有 `consumer_orphan` 且对应 endpoint 在某 `not_involved_repos[]` 仓的 `references/{repo}/03-contracts.yaml` 中声明为 producer → 加入 `suspected_missing_fanout[]`。最终 §9.5 提示用户重跑该仓。
 
+## Step 7.6：Report 聚合（主 agent）
+
+`report.md` 顶层结构（11 节标准模板，§9 子节按团队仓扩展）：
+
+| 章节 | 来源 |
+|------|------|
+| §1-§8 通用章节 | 主 agent 基于 requirement-ir + 跨仓视角生成 |
+| §9.1 Frontend | 摘要 `per-repo/{role=frontend 的仓}/report.md` 的 §3 + §6 |
+| §9.2 BFF | 摘要 `per-repo/{role=bff 的仓}/report.md` |
+| §9.3 Backend | 摘要 `per-repo/{role=backend 的仓}/report.md` |
+| §9.4 External | 主 agent 从各仓 layer-impact 的 external 层合并 |
+| §9.5 跨层对齐风险 | 直接由 `cross-align.yaml` 渲染 |
+| §9.{unavail-repo} | 标 `unavailable: <reason>`，confidence=low |
+
+### 摘要规则
+
+每个 §9.{repo} 子节写：
+
+1. **代码坐标**：列前 5 个 IMP 的 anchor（指向 `repos/{repo}/...` 的真实路径）
+2. **关键契约 delta**：从 per-repo contract-delta.yaml 抽取的 `change_type != NO_CHANGE` 条目
+3. **风险摘要**：复制 per-repo report.md 的 §6 风险节顶部 3 条
+4. **锚点链接**：`详见 [per-repo/{repo}/report.md](per-repo/{repo}/report.md)`
+
+**禁止全文复制 per-repo report.md** — 全文留在 `per-repo/{repo}/report.md`。
+
+### Layer Impact 聚合
+
+主 agent 把各仓 `per-repo/{repo}/context/layer-impact.yaml` 的 4 层条目合并，写入 `context/layer-impact.yaml`，每个 IMP 加 `repo:` 字段标识来源仓。
+
+### Contract Delta 聚合
+
+主 agent 把各仓 `per-repo/{repo}/context/contract-delta.yaml` 的 deltas[] 合并到顶层 `context/contract-delta.yaml`，每条加 `repo:` 字段；`consumers[]` 按 cross-align 结果跨仓填充。
+
 ## Step 8：Plan（团队模式）
 
 生成 `team-plan.md` + N 份 `plans/plan-{repo}.md`。
