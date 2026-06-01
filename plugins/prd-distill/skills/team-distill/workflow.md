@@ -132,8 +132,10 @@ _prd-tools/distill/{slug}/per-repo/{repo}/
 
 1. **Endpoint 索引**
    遍历每个 `per-repo/{repo}/context/contract-delta.yaml`，对每条 `deltas[i]`：
-   - 抽 key：`(deltas[i].name, deltas[i].contract_surface)`（例如 `("POST /api/v1/order", "endpoint")`）
-   - 记录：`{repo, role: producer if deltas[i].producer == repo's layer else consumer}`
+   - 抽 key：`(normalize(deltas[i].name), deltas[i].contract_surface)` —— `normalize` 规则：去首尾空格、统一小写 method、去末尾 `/`、合并多余空白；例：`"POST /api/v1/order/"` → `"post /api/v1/order"`
+   - 记录：`{repo, role}`，其中 `role` 推导规则：
+     - `deltas[i].producer != repo's layer` → `consumer`
+     - `deltas[i].producer == repo's layer`：再校验本仓 reference（`references/{repo}/01-codebase.yaml` 或 `04-routing-playbooks.yaml`）是否声明了对应的 endpoint/route；声明者标 `producer`，未声明者标 `consumer`（同一 layer 多仓时的 tie-break）
 
 2. **闭环检查** — 按 key 分组：
    | 出现情况 | 标记 |
@@ -157,7 +159,13 @@ _prd-tools/distill/{slug}/per-repo/{repo}/
    对 `aligned` 的 endpoint，查 producer 仓 `references/{repo}/03-contracts.yaml` 该条目的 `owner` — 为空标记 `owner_missing`。
 
 5. **Handoff 合并**
-   读各仓 `references/{repo}/04-routing-playbooks.yaml` 的 `cross_repo_handoffs[]`，按 `(from_repo, to_repo, surface)` 三元组去重合并。
+   读各仓 `references/{repo}/04-routing-playbooks.yaml` 的 `cross_repo_handoffs[]`。每条记录推导：
+   - `from_repo` = 该 yaml 文件所属仓（从 `references/{repo}/` 路径取）
+   - `to_repo` = 条目的 `repo` 字段
+   - `reason` = 条目的 `handoff_reason`
+   - 保留 `verification` 与 `owner_to_confirm` 透传
+
+   按 `(from_repo, to_repo, reason)` 三元组去重合并。在 `cross-align.yaml` 的 `handoffs[]` 中输出，每条字段：`{from_repo, to_repo, reason, verification, owner_to_confirm}`。
 
 ### 产物：`context/cross-align.yaml`
 
@@ -175,7 +183,9 @@ endpoints:
 handoffs:
   - from_repo: dive-fe
     to_repo: dive-bff
-    surface: "POST /api/v1/order"
+    reason: "下单走 BFF 聚合接口"
+    verification: "confirmed"
+    owner_to_confirm: ""
 unavailable_repos: ["dive-be-legacy"]
 suspected_missing_fanout: []   # consumer_orphan 推断出的疑似漏 fan-out 仓
 ```
