@@ -2,6 +2,29 @@
 
 All notable changes to the **prd-distill** plugin are documented here.
 
+## [2.20.0] - 2026-06-01
+
+### Added
+- feat(team-distill): add Step 7.6 report aggregation
+- feat(team-distill): add Step 7.5 cross-repo contract alignment
+- feat(prd-distill): add single-repo subagent mode for team-distill fan-out
+- feat: SKILL.md + workflow 自动扫描 prd-docs/ 目录作为历史文档输入
+
+### Changed
+- docs: changelog for team-distill fan-out/fan-in
+- docs(prd-distill): add cross-align.yaml schema for team-distill Step 7.5
+- refactor(team-distill): rewrite Step 8/9/10/11 for fan-out/fan-in mode
+- refactor(team-distill): replace Step 4-7 with subagent fan-out orchestration
+- refactor(team-distill): rewrite header + add Step 3.5 (involved repo detection)
+- docs(team-distill): refresh SKILL.md frontmatter description for fan-out/fan-in
+- docs(team-distill): update SKILL.md to reflect fan-out/fan-in architecture
+
+### Fixed
+- fix(team-distill): align unavailable_repos shape with output-contracts.md schema
+- fix(team-distill): Step 7.5 algorithm — name normalization, layer tie-break, real handoff schema
+- fix(team-distill): correct prd-distill workflow.md links + flag Step 3.5 numbering
+- fix(prd-distill): correct Step 6/7 labels in subagent skip table
+
 ## [Unreleased]
 
 ### Added

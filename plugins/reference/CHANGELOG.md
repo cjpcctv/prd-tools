@@ -2,6 +2,22 @@
 
 All notable changes to the **reference** plugin are documented here.
 
+## [2.20.0] - 2026-06-01
+
+### Added
+- feat(team-reference): add HEAD consistency check between repos/ and references/
+- feat(reference): add source_path/submodule to team_repos schema
+- feat(reference): add Mode D for incremental sample enrichment
+- feat: SKILL.md + workflow 自动扫描 prd-docs/ 目录作为历史文档输入
+
+### Changed
+- chore(contracts): sync output-contracts.md across plugins (cross-align section)
+- docs: README 补充 prd-docs 目录准备说明和首次 F-A 流程引导
+- 配置与开关
+
+### Fixed
+- fix(team-reference): skip HEAD check gracefully when git_head field absent
+
 ## [2.19.10] - 2026-05-20
 
 ### Changed

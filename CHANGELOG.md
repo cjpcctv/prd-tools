@@ -2,6 +2,45 @@
 
 > 遵循 [Keep a Changelog](https://keepachangelog.com/) 格式。架构决策详见 [docs/adr/](docs/adr/)。
 
+## [2.20.0] - 2026-06-01
+
+### Added
+- feat(quality-gate): integrate fan-out checks into run_distill_quality
+- feat(quality-gate): add _dq_cross_align and _dq_team_section_9 checks
+- feat(quality-gate): add _dq_per_repo_completeness check
+- feat(team-distill): add Step 7.6 report aggregation
+- feat(team-distill): add Step 7.5 cross-repo contract alignment
+- feat(prd-distill): add single-repo subagent mode for team-distill fan-out
+- feat(team-reference): add HEAD consistency check between repos/ and references/
+- feat(reference): add source_path/submodule to team_repos schema
+- feat(reference): add Mode D for incremental sample enrichment
+- feat: SKILL.md + workflow 自动扫描 prd-docs/ 目录作为历史文档输入
+
+### Changed
+- chore(contracts): sync output-contracts.md across plugins (cross-align section)
+- docs: changelog for team-distill fan-out/fan-in
+- docs(prd-distill): add cross-align.yaml schema for team-distill Step 7.5
+- refactor(team-distill): rewrite Step 8/9/10/11 for fan-out/fan-in mode
+- refactor(team-distill): replace Step 4-7 with subagent fan-out orchestration
+- refactor(team-distill): rewrite header + add Step 3.5 (involved repo detection)
+- docs(team-distill): refresh SKILL.md frontmatter description for fan-out/fan-in
+- docs(team-distill): update SKILL.md to reflect fan-out/fan-in architecture
+- docs(superpowers): team-distill fan-out/fan-in implementation plan
+- docs(superpowers): team-distill fan-out/fan-in design spec
+- docs(superpowers): add Mode D design spec and implementation plan
+- Merge branch 'v2.0' of https://github.com/zachary-lz-glm/prd-tools into v2.0
+- docs: README 补充 prd-docs 目录准备说明和首次 F-A 流程引导
+- 配置与开关
+
+### Fixed
+- fix(team-distill): align unavailable_repos shape with output-contracts.md schema
+- fix(quality-gate): print fan-out checks + scan per-repo for contract changes
+- fix(quality-gate): scope §9 per-repo check to §9 region only
+- fix(team-distill): Step 7.5 algorithm — name normalization, layer tie-break, real handoff schema
+- fix(team-distill): correct prd-distill workflow.md links + flag Step 3.5 numbering
+- fix(prd-distill): correct Step 6/7 labels in subagent skip table
+- fix(team-reference): skip HEAD check gracefully when git_head field absent
+
 ## [Unreleased]
 
 ### Added
