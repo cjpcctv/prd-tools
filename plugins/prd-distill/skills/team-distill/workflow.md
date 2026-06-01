@@ -1,8 +1,10 @@
 # team-distill 工作流
 
+<!-- 编号说明：Step 3.5 / 7.5 / 7.6 是显式插入的新流程节点，与 CLAUDE.md "禁止小数编号" 规则的冲突已知；待团队评审后可决定是否单独 PR 调整 CLAUDE.md。 -->
+
 > **架构**：主 agent 编排 + subagent 并行蒸馏 + 主 agent 聚合（fan-out/fan-in）。spec 见 [docs/superpowers/specs/2026-06-01-team-distill-fanout-design.md](../../../../docs/superpowers/specs/2026-06-01-team-distill-fanout-design.md)。
 >
-> Step 1-3（PRD Ingestion / Evidence / Requirement IR）由**主 agent**执行，与单仓模式相同；详见 [skills/prd-distill/workflow.md](../../prd-distill/skills/prd-distill/workflow.md)。
+> Step 1-3（PRD Ingestion / Evidence / Requirement IR）由**主 agent**执行，与单仓模式相同；详见 [skills/prd-distill/workflow.md](../prd-distill/workflow.md)。
 > Step 4-7 由 **subagent fan-out** 执行（每仓一个 subagent，使用 prd-distill 的 "single-repo subagent 模式"）。
 > Step 7.5 / 7.6 / 8 / 9-11 由**主 agent**聚合。
 
@@ -20,7 +22,7 @@
 
 ## Step 1-3：主 agent 一次性完成
 
-PRD Ingestion → Evidence → Requirement IR，流程同 [prd-distill/workflow.md](../../prd-distill/skills/prd-distill/workflow.md)。
+PRD Ingestion → Evidence → Requirement IR，流程同 [prd-distill/workflow.md](../prd-distill/workflow.md)。
 
 额外消费（同旧版）：
 - 各仓 `references/{repo}/05-domain.yaml`：术语，用于 requirement-ir 术语对齐
