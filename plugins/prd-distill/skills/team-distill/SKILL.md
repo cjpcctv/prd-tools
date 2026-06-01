@@ -1,6 +1,6 @@
 ---
 name: team-distill
-description: 团队级 PRD 蒸馏 — 跨多个仓库（前端/BFF/后端）的 PRD 蒸馏，从团队 reference 原样副本生成 team-plan 和各仓库 sub-plan。适用于用户调用 /team-distill，且已有团队 knowledge base 时。
+description: 团队级 PRD 蒸馏 — 主 agent 编排 + subagent 在各成员仓 repos/{repo}/ 并行蒸馏 + 主 agent 跨仓聚合，产出 team-plan 与各仓 sub-plan。适用于用户调用 /team-distill 且团队仓已配置 references/ 与 repos/ submodule 时。
 ---
 
 # team-distill
