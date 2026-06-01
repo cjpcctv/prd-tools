@@ -381,10 +381,7 @@ media:
 
 ## 6. 配置与开关
 ### Feature Flag
-配置apollo主要用于配置业务变量，便于更新
-开关toggle主要用于灰度放量
-
-开关（配置）名称、作用、默认值。
+开关名称、作用、默认值。
 
 ### 灰度策略
 灰度维度（用户/城市/百分比）、回滚条件。
@@ -687,6 +684,56 @@ alignment_summary:
 ```
 
 以下场景必须生成 Contract Delta：多层协作、API/schema 变化、下游系统集成、权益/券/支付/奖励链路、审计 payload、异步事件。
+
+## context/cross-align.yaml（团队模式专用）
+
+`/team-distill` Step 7.5 由主 agent 产出。subagent 不产此文件。
+
+```yaml
+schema_version: "1"
+tool_version: "<tool-version>"
+meta:
+  primary_source: "per-repo/{repo}/context/contract-delta.yaml"
+  produced_by: "team-distill main agent (Step 7.5)"
+endpoints:
+  - key: "POST /api/v1/order"            # name + contract_surface 组合
+    contract_surface: "endpoint"          # endpoint | schema | event | payload | db_table | external_api
+    status: "aligned | consumer_orphan | producer_conflict | producer_orphan"
+    producer:
+      repo: "dive-bff"
+      owner: "team-bff"
+    consumers:
+      - repo: "dive-fe"
+    field_drift:
+      only_in_producer: []
+      only_in_consumer: []
+    risks:                                # owner_missing | field_drift | producer_conflict | ...
+      - "owner_missing"
+handoffs:                                  # 各仓 04-routing-playbooks.cross_repo_handoffs 合并去重
+  - from_repo: "dive-fe"
+    to_repo: "dive-bff"
+    reason: "下单走 BFF 聚合接口"
+    verification: "confirmed"
+    owner_to_confirm: ""
+unavailable_repos:
+  - repo: "dive-be-legacy"
+    reason: "submodule_uninitialized | subagent_failed"
+suspected_missing_fanout: []              # consumer_orphan 推断出的疑似漏 fan-out 仓
+summary:
+  total_endpoints: 0
+  aligned: 0
+  consumer_orphan: 0
+  producer_conflict: 0
+  producer_orphan: 0
+```
+
+生成规则：
+
+- 仅在 `/team-distill` 团队模式产出，单仓 `/prd-distill` 不产
+- `endpoints[].key` = `<name> <contract_surface>` 拼接，确保跨仓 endpoint 可对齐；`name` 经过 normalize（去首尾空格、统一小写 method、去末尾 `/`、合并多余空白）
+- `risks[]` 来源：`owner_missing` 由产 producer 仓的 `references/{repo}/03-contracts.yaml` owner 字段判定；`field_drift` 由 producer/consumer 字段 diff 判定
+- `handoffs[]` 字段：`from_repo` 是发起仓（04-routing-playbooks.yaml 的所属仓），`to_repo` 是被调用仓（条目的 `repo` 字段），`reason` 复制自 `handoff_reason`
+- `suspected_missing_fanout[]` 仅在以下条件成立时才填入：`consumer_orphan` 的 endpoint 在某个 `Step 3.5` 标为 not_involved 的仓的 `references/{repo}/03-contracts.yaml` 中声明为 producer
 
 ## context/reference-update-suggestions.yaml
 
