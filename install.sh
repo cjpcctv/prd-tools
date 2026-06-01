@@ -58,15 +58,13 @@ fi
 # ── 复制 skills ─────────────────────────────────────────────────
 mkdir -p "$CLAUDE_SKILLS_DIR"
 echo "==> 安装 skills 到 $CLAUDE_SKILLS_DIR"
-for skill in reference prd-distill; do
-  src="$ARCHIVE_ROOT/plugins/$skill/skills/$skill"
-  if [ -d "$src" ]; then
-    rm -rf "$CLAUDE_SKILLS_DIR/$skill"
-    cp -r "$src" "$CLAUDE_SKILLS_DIR/$skill"
-    echo "    已安装 skill：$skill"
-  else
-    echo "    警告：源码包内未找到 $skill" >&2
-  fi
+# 自动发现所有 plugins/*/skills/* 目录（每个 skill 目录名即为 skill 名）
+for skill_dir in "$ARCHIVE_ROOT"/plugins/*/skills/*/; do
+  [ -d "$skill_dir" ] || continue
+  skill_name="$(basename "$skill_dir")"
+  rm -rf "$CLAUDE_SKILLS_DIR/$skill_name"
+  cp -r "$skill_dir" "$CLAUDE_SKILLS_DIR/$skill_name"
+  echo "    已安装 skill：$skill_name"
 done
 if [ -d "$CLAUDE_SKILLS_DIR/build-reference" ]; then
   rm -rf "$CLAUDE_SKILLS_DIR/build-reference"
