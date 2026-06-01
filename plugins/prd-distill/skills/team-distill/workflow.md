@@ -186,7 +186,9 @@ handoffs:
     reason: "下单走 BFF 聚合接口"
     verification: "confirmed"
     owner_to_confirm: ""
-unavailable_repos: ["dive-be-legacy"]
+unavailable_repos:
+  - repo: "dive-be-legacy"
+    reason: "submodule_uninitialized"   # 详细 schema 见 output-contracts.md
 suspected_missing_fanout: []   # consumer_orphan 推断出的疑似漏 fan-out 仓
 ```
 
