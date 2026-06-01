@@ -227,31 +227,53 @@ suspected_missing_fanout: []   # consumer_orphan 推断出的疑似漏 fan-out �
 
 主 agent 把各仓 `per-repo/{repo}/context/contract-delta.yaml` 的 deltas[] 合并到顶层 `context/contract-delta.yaml`，每条加 `repo:` 字段；`consumers[]` 按 cross-align 结果跨仓填充。
 
-## Step 8：Plan（团队模式）
+## Step 8：Plan 生成（主 agent）
 
-生成 `team-plan.md` + N 份 `plans/plan-{repo}.md`。
+主 agent **统一生成**所有 plan，subagent 不出 plan。
 
-成员仓列表从 `project-profile.yaml` 的 `team_repos[]` 读取。涉及的仓库和角色从各仓 03-contracts.yaml 自动推断。
+### team-plan.md 结构（沿用 7 节，内容来源升级）
 
-**team-plan.md 结构**：
-1. **范围与假设**：目标、跨仓依赖、成员仓角色表
-2. **涉及仓库总览**：按 repo 分组的代码坐标、跨仓调用链、关键设计决策
-3. **跨仓时序**：Phase 1-N 跨仓依赖图、每个仓的交付里程碑
-4. **Sub-Plan 索引表**：列出所有 sub-plan 文件名 + 对应仓 + IMP 数
-5. **契约对齐（跨仓）**：从 contract-delta.yaml 提取跨仓契约摘要
-6. **风险与回滚**：跨仓联调风险、回滚策略
-7. **工作量总览**：按仓汇总
+1. **范围与假设**：目标、跨仓依赖、`involved_repos` 角色表（来自 Step 3.5）
+2. **涉及仓库总览**：每仓代码坐标（从 per-repo layer-impact 抽 anchor）+ 跨仓调用链（从 cross-align.handoffs）
+3. **跨仓时序**：依赖图由 `cross-align.endpoints` 的 producer→consumer 关系生成；Phase 1-N 按"被依赖在前"拓扑排序
+4. **Sub-Plan 索引表**：列每个 plan 文件路径 + IMP 数 + 是否 unavailable
+5. **契约对齐（跨仓）**：从 `cross-align.yaml` 抽 `aligned/orphan/conflict/drift` 摘要
+6. **风险与回滚**：跨仓联调风险（cross-align 中 risks 字段聚合）+ 回滚策略
+7. **工作量总览**：按仓汇总（从 per-repo report 工作量节加总）
 
-**plans/plan-{repo}.md**：复用标准 11-section plan 模板，scope 限定到单个成员仓。
+### plans/plan-{repo}.md
+
+主 agent 基于 `per-repo/{repo}/report.md` 生成，沿用单仓 11-section plan 模板。**scope 限定到该仓**，不混入其他仓信息。
+
+unavailable 仓也要产出占位 plan：
+
+```markdown
+# plan-{repo}.md (UNAVAILABLE)
+
+> 该仓在本次蒸馏中标记为 unavailable，原因：{reason}
+> 待用户处理后，重跑 `/team-distill` 生成完整 plan。
+
+**Status:** blocked
+**Next action:** {next_action_text}
+```
 
 文件名从 `team_repos[].repo` 动态生成，禁止硬编码。
 
-## Step 9-11：同单仓
+## Step 9：Readiness Score（主 agent）
 
-Readiness Score、Reference Backflow、Quality Gate 流程同单仓模式。
+同单仓模式，但分子分母按 involved_repos 计算（unavailable 仓不计入分母）。
 
-Quality Gate 团队模式检查 `team-plan.md` + `plans/` 目录（而非 `plan.md`）。
+## Step 10：Reference Backflow（主 agent）
 
-团队模式 Reference 回流额外触发条件：
-- 发现跨仓契约、owner、handoff 或团队级术语候选，但当前仓不能独立确认。
-- `team_reference_candidate: true` 标记为团队知识库收集候选。
+同单仓模式，但每条建议加 `target_repo` 字段。team_reference_candidate 仍标记，不自动写入。
+
+## Step 11：Quality Gate（主 agent）
+
+```bash
+python3 scripts/quality-gate.py distill \
+  --distill-dir _prd-tools/distill/<slug> \
+  --repo-root .
+```
+
+检查项见 quality-gate.py 中 `run_distill_quality` 团队模式分支。unavailable 仓不阻断交付，但 gate 输出 `severity: warning` 计入摘要。
+
