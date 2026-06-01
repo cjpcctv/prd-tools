@@ -11,17 +11,19 @@ description: 团队级 PRD 蒸馏 — 跨多个仓库（前端/BFF/后端）的 
 
 ## 与单仓模式的差异
 
-| 方面 | 单仓 `/prd-distill` | 团队 `/team-distill` |
-|------|---------------------|---------------------|
-| 源码扫描 | rg/glob + reference | **禁止 rg/glob**，只读 `references/{repo}/` 下的 01-05 YAML |
-| Step 4.1 Query Plan | index 存在则执行 | 从 `references/{repo}/index/` 加载多仓 index（`context-pack.py --team-references`） |
-| Step 4.2 Graph Context | 3 阶段扫描 | **只读 reference**：从各仓 01-05 YAML 构建理解，禁止 rg/glob |
-| 涉及仓库识别 | 不适用 | 自动匹配 PRD 需求 → 各仓 reference，识别涉及仓库及角色 |
-| Contract Delta | 单仓视角 | 跨仓视角：从各仓 03-contracts.yaml 理解 producer/consumer 边界 |
-| Plan | 1 份 plan.md | 1 份 team-plan.md + N 份 plans/plan-{repo}.md |
-| Report | 1 份 report.md | 1 份 report.md（按仓库分组展示影响和任务） |
+| 方面 | 单仓 `/prd-distill` | 团队 `/team-distill`（fan-out/fan-in） |
+|------|---------------------|---------------------------------------|
+| 编排模型 | 单 agent 顺序 11 步 | 主 agent 跑 Step 1-3 + 3.5 → 涉及仓 fan-out subagent → 主 agent 聚合（Step 7.5/7.6/8/9-11） |
+| 源码扫描 | rg/glob + reference | 主 agent 禁止 rg/glob；**subagent 在 `repos/{repo}/` 内可正常 rg/glob** |
+| Step 3.5 涉及仓识别（新增） | 不适用 | 主 agent 用 PRD 关键词 × 各仓 01-codebase + 04-routing-playbooks 匹配，输出 `involved_repos[]` |
+| Step 4-7 | 主 agent 直接跑 | **fan-out**：主 agent 用 Agent 工具并行 dispatch subagent，每个 subagent 在自己仓内跑 Step 4-7（参见 prd-distill/workflow.md "single-repo subagent 模式"） |
+| Step 4.5 Context Pack | 单仓 | 从 `references/{repo}/index/` 加载多仓 index（`context-pack.py --team-references`） |
+| Contract Delta | 单仓视角 | subagent 出本仓 contract-delta；**主 agent Step 7.5 跨仓对齐**，产物 `context/cross-align.yaml` |
+| Step 7.6 Report 聚合 | — | 主 agent 把各仓 report 摘要合并到团队 report.md §9.{repo}，§9.5 由 cross-align 渲染 |
+| Plan | 1 份 plan.md | 主 agent 出 1 份 team-plan.md + N 份 plans/plan-{repo}.md（基于 per-repo report 生成） |
+| 输出布局 | `<distill>/{report.md, plan.md, context/}` | `<distill>/{per-repo/{repo}/, report.md, team-plan.md, plans/, context/}` |
 
-成员仓列表来自 `project-profile.yaml` 的 `team_repos[]`。涉及的仓库和角色从各仓 03-contracts.yaml 自动推断。
+成员仓列表来自 `project-profile.yaml` 的 `team_repos[]`，每仓需配置 `source_path` 与 `submodule: true`。
 
 ## 核心职责
 
@@ -47,16 +49,27 @@ description: 团队级 PRD 蒸馏 — 跨多个仓库（前端/BFF/后端）的 
 
 ```text
 _prd-tools/distill/<slug>/
-├── _ingest/                       # 同单仓
-├── report.md                      # 团队级报告（§9 分 5 个子节）
-├── team-plan.md                   # 团队级开发计划总览
-├── plans/                         # Sub-Plans（动态命名）
-│   ├── plan-{repo1}.md            # 成员仓 sub-plan
+├── _ingest/                          # 主 agent 一次落地（PRD/document.md）
+├── per-repo/                         # 新增：subagent 全量产物（每仓一目录）
+│   └── {repo}/
+│       ├── report.md
+│       ├── context/
+│       │   ├── layer-impact.yaml
+│       │   ├── contract-delta.yaml
+│       │   └── ...
+│       ├── evidence/
+│       └── _failure.json             # 仅失败仓产生
+├── report.md                         # 团队级报告（§9 分 5+N 子节）
+├── team-plan.md                      # 团队级开发计划总览
+├── plans/
+│   ├── plan-{repo1}.md
 │   └── plan-{repo2}.md
 └── context/
-    ├── layer-impact.yaml          # 4 层完整填充
-    ├── contract-delta.yaml        # 跨仓 consumers[]
-    └── ...                        # 其余同单仓
+    ├── requirement-ir.yaml           # 主 agent 一次生成，广播给 subagent
+    ├── layer-impact.yaml             # 主 agent 聚合（4 层来自各仓）
+    ├── contract-delta.yaml           # 主 agent 聚合
+    ├── cross-align.yaml              # 新增：跨仓对齐结论
+    └── ...
 ```
 
 ## 参考文件
