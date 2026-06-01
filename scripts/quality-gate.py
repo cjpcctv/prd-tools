@@ -303,7 +303,12 @@ def _dq_team_section_9(base, involved_repos):
     text = p.read_text(encoding='utf-8')
     required_titles = ['§9.1 Frontend', '§9.2 BFF', '§9.3 Backend', '§9.4 External', '§9.5']
     missing = [t for t in required_titles if t not in text]
-    repo_missing = [r for r in involved_repos if f'§9.{r}' not in text and f'### {r}' not in text]
+    # Scope per-repo subsection check to the §9 region only (avoid matching ### {r} headings elsewhere)
+    sec9_start = text.find('## §9')
+    if sec9_start < 0:
+        sec9_start = text.find('§9.1')  # fallback if §9 doesn't have its own H2
+    sec9_text = text[sec9_start:] if sec9_start >= 0 else ''
+    repo_missing = [r for r in involved_repos if f'§9.{r}' not in sec9_text]
     status = 'fail' if missing else ('warning' if repo_missing else 'pass')
     return {
         'status': status,
