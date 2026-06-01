@@ -124,6 +124,66 @@ _prd-tools/distill/{slug}/per-repo/{repo}/
 
 缺少则降级到 `partial_repos[]`。
 
+## Step 7.5：跨仓对齐（新增，主 agent）
+
+输入：所有 `per-repo/{repo}/context/contract-delta.yaml`（每个 subagent 已产出本仓视角）
+
+算法（确定性，不依赖 LLM 推理；按规则执行）：
+
+1. **Endpoint 索引**
+   遍历每个 `per-repo/{repo}/context/contract-delta.yaml`，对每条 `deltas[i]`：
+   - 抽 key：`(deltas[i].name, deltas[i].contract_surface)`（例如 `("POST /api/v1/order", "endpoint")`）
+   - 记录：`{repo, role: producer if deltas[i].producer == repo's layer else consumer}`
+
+2. **闭环检查** — 按 key 分组：
+   | 出现情况 | 标记 |
+   |---------|------|
+   | 同 key 同时有 producer 和至少 1 个 consumer | `aligned` |
+   | 只有 producer，无 consumer | `producer_orphan`（可能正常，记录但不报警） |
+   | 只有 consumer，无 producer | `consumer_orphan`（**风险**） |
+   | 多个 producer | `producer_conflict`（**风险**） |
+
+3. **字段一致性**
+   同 key producer 与各 consumer 的 `request_fields[]` / `response_fields[]` 字段名集合做差集，写入 `field_drift[]`：
+
+   ```yaml
+   field_drift:
+     - key: "POST /api/v1/order"
+       only_in_producer: ["x_signature"]
+       only_in_consumer: ["legacy_id"]
+   ```
+
+4. **Owner 缺位**
+   对 `aligned` 的 endpoint，查 producer 仓 `references/{repo}/03-contracts.yaml` 该条目的 `owner` — 为空标记 `owner_missing`。
+
+5. **Handoff 合并**
+   读各仓 `references/{repo}/04-routing-playbooks.yaml` 的 `cross_repo_handoffs[]`，按 `(from_repo, to_repo, surface)` 三元组去重合并。
+
+### 产物：`context/cross-align.yaml`
+
+详细 schema 见 [prd-distill/references/output-contracts.md](../prd-distill/references/output-contracts.md) 的 `context/cross-align.yaml` 章节。简要结构：
+
+```yaml
+schema_version: "1"
+endpoints:
+  - key: "POST /api/v1/order"
+    status: aligned | consumer_orphan | producer_conflict | producer_orphan
+    producer: { repo: dive-bff, owner: "team-bff" }
+    consumers: [{ repo: dive-fe }]
+    field_drift: { only_in_producer: [], only_in_consumer: [] }
+    risks: ["owner_missing"]
+handoffs:
+  - from_repo: dive-fe
+    to_repo: dive-bff
+    surface: "POST /api/v1/order"
+unavailable_repos: ["dive-be-legacy"]
+suspected_missing_fanout: []   # consumer_orphan 推断出的疑似漏 fan-out 仓
+```
+
+### 漏判兜底
+
+如有 `consumer_orphan` 且对应 endpoint 在某 `not_involved_repos[]` 仓的 `references/{repo}/03-contracts.yaml` 中声明为 producer → 加入 `suspected_missing_fanout[]`。最终 §9.5 提示用户重跑该仓。
+
 ## Step 8：Plan（团队模式）
 
 生成 `team-plan.md` + N 份 `plans/plan-{repo}.md`。
