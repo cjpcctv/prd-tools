@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-REPO="zachary-lz-glm/prd-tools"
+REPO="cjpcctv/prd-tools"
 BRANCH="${PRD_TOOLS_BRANCH:-v2.0}"
 USE_REMOTE="${PRD_TOOLS_REMOTE:-0}"
 TARGET="${1:-.}"

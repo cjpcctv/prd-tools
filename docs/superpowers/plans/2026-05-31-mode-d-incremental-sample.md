@@ -14,7 +14,7 @@
 - 现有模式定义：[plugins/reference/skills/reference/SKILL.md](../../../plugins/reference/skills/reference/SKILL.md)
 - Phase 映射：[plugins/reference/skills/reference/workflow.md](../../../plugins/reference/skills/reference/workflow.md)
 
-**Commit 策略：** 全部改动合并为 1 个 `feat:` commit（符合 [acac9f2](https://github.com/zachary-lz-glm/prd-tools) 的现有 pattern：SKILL+workflow 联合更新）。中间任务**只 stage 不 commit**，最后一个任务统一提交，避免多次触发 post-commit 自动 release。
+**Commit 策略：** 全部改动合并为 1 个 `feat:` commit（符合 [acac9f2](https://github.com/cjpcctv/prd-tools) 的现有 pattern：SKILL+workflow 联合更新）。中间任务**只 stage 不 commit**，最后一个任务统一提交，避免多次触发 post-commit 自动 release。
 
 ---
 

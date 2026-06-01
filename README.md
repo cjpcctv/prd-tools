@@ -6,7 +6,7 @@ PRD Tools 把 PRD 从"自然语言需求"转成"有证据、可执行、可测�
 
 ```bash
 # 1. 安装（指定目标项目目录）
-curl -fsSL https://raw.githubusercontent.com/zachary-lz-glm/prd-tools/v2.0/install.sh | bash -s /path/to/project
+curl -fsSL https://raw.githubusercontent.com/cjpcctv/prd-tools/v2.0/install.sh | bash -s /path/to/project
 
 # 2. 准备上下文材料（重要！）
 #    在目标项目根目录创建 prd-docs/，放入历史 PRD、技术方案、接口文档等
