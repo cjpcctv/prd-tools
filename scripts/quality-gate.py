@@ -258,6 +258,60 @@ def _dq_per_repo_completeness(base, involved_repos):
     }
 
 
+def _dq_cross_align(base, has_contract_changes):
+    """检查 cross-align.yaml 存在性与基本结构。
+
+    - 文件不存在：若 has_contract_changes=True 则 warning（PRD 有契约改动但无对齐结论），否则 pass
+    - 文件存在但无 endpoints[]：warning
+    - 文件存在且有 endpoints[]：pass，附统计
+    """
+    p = base / 'context' / 'cross-align.yaml'
+    if not p.is_file():
+        if has_contract_changes:
+            return {'status': 'warning', 'reason': 'cross-align.yaml 缺失但 PRD 涉及契约改动'}
+        return {'status': 'pass', 'reason': 'PRD 无契约改动，cross-align 可省略'}
+    try:
+        data = yaml.safe_load(p.read_text(encoding='utf-8')) or {}
+    except Exception as e:
+        return {'status': 'fail', 'reason': f'yaml 解析失败: {e}'}
+    endpoints = data.get('endpoints') or []
+    if not endpoints:
+        return {'status': 'warning', 'reason': 'cross-align.yaml 存在但 endpoints 为空'}
+    by_status = {}
+    for ep in endpoints:
+        s = ep.get('status', 'unknown')
+        by_status[s] = by_status.get(s, 0) + 1
+    suspected = data.get('suspected_missing_fanout') or []
+    status = 'warning' if (by_status.get('consumer_orphan', 0) > 0 or suspected) else 'pass'
+    return {
+        'status': status,
+        'total': len(endpoints),
+        'by_status': by_status,
+        'suspected_missing_fanout': suspected,
+    }
+
+
+def _dq_team_section_9(base, involved_repos):
+    """检查 report.md §9 子节齐全。
+
+    必须含 §9.1 Frontend / §9.2 BFF / §9.3 Backend / §9.4 External / §9.5 跨层对齐风险,
+    以及每个 involved_repo 一个 §9.{repo} 子节（unavailable 仓也要有占位）。
+    """
+    p = base / 'report.md'
+    if not file_exists_nonempty(p):
+        return {'status': 'fail', 'reason': 'report.md 不存在或为空'}
+    text = p.read_text(encoding='utf-8')
+    required_titles = ['§9.1 Frontend', '§9.2 BFF', '§9.3 Backend', '§9.4 External', '§9.5']
+    missing = [t for t in required_titles if t not in text]
+    repo_missing = [r for r in involved_repos if f'§9.{r}' not in text and f'### {r}' not in text]
+    status = 'fail' if missing else ('warning' if repo_missing else 'pass')
+    return {
+        'status': status,
+        'missing_required': missing,
+        'missing_repo_subsections': repo_missing,
+    }
+
+
 def _dq_prd_coverage_simple(base):
     coverage_path = base / 'context' / 'coverage-report.yaml'
     if coverage_path.is_file():
