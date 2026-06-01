@@ -2,6 +2,22 @@
 
 All notable changes to the **prd-distill** plugin are documented here.
 
+## [Unreleased]
+
+### Added
+- **team-distill fan-out/fan-in 编排**：`/team-distill` 重构为「主 agent 编排 + subagent 并行蒸馏 + 主 agent 聚合」两段式架构。subagent 在团队仓内的成员仓 submodule 上跑 prd-distill Step 4-7，主 agent 跨仓对齐契约后聚合 report 与 plan
+- 新增 `context/cross-align.yaml` 跨仓对齐产物（schema 见 references/output-contracts.md）
+- prd-distill workflow.md 新增「single-repo subagent 模式」小节
+- quality-gate 团队模式新增 3 项检查：per-repo 完整性 / cross-align 存在性 / report.md §9 子节齐全
+- Step 3.5 涉及仓识别 / Step 7.5 跨仓对齐 / Step 7.6 Report 聚合（主 agent）
+
+### Changed
+- `team_repos[]` schema 新增 `source_path` 与 `submodule` 字段（向后兼容：旧 profile 仍可读，仅在跑 fan-out 时校验）
+- team-distill SKILL.md 差异表更新：subagent 在 `repos/{repo}/` 内可正常 rg/glob
+
+### Migration
+- 团队仓需要将各成员仓加为 git submodule 至 `repos/{repo}/`，并在 `project-profile.yaml` 的 `team_repos[].source_path` 配置路径。未配置时 `/team-distill` 退化为旧"只读 reference"模式（每仓标 unavailable，提示 `git submodule update --init`）。
+
 ## [2.19.10] - 2026-05-20
 
 ### Changed

@@ -2,6 +2,15 @@
 
 > 遵循 [Keep a Changelog](https://keepachangelog.com/) 格式。架构决策详见 [docs/adr/](docs/adr/)。
 
+## [Unreleased]
+
+### Added
+- team-distill 升级为 fan-out/fan-in 架构（spec：`docs/superpowers/specs/2026-06-01-team-distill-fanout-design.md`）
+- quality-gate.py 团队模式新增 3 项检查（per-repo 完整性 / cross-align 存在性 / §9 子节齐全）
+
+### Changed
+- `team_repos[]` schema 加 `source_path` / `submodule` 字段
+
 ## [2.19.10] - 2026-05-20
 
 ### Changed
