@@ -21,8 +21,10 @@ reference_scope:
 
 # ── 团队仓库配置（仅团队仓库填写）──
 # team_repos:                                            # 成员仓库列表
-#   - repo: "dive-bff"                                  # 仓库名（也是 references/ 下的目录名）
-#     local_path: "../dive-bff"                          # 本地路径
+#   - repo: "dive-bff"                                   # 仓库名（也是 references/ 下的目录名）
+#     local_path: "../dive-bff"                          # 用户机上工作副本，用于 /team-reference 复制 reference
+#     source_path: "repos/dive-bff"                      # 团队仓内的 submodule 路径，用于 /team-distill subagent CWD
+#     submodule: true                                    # 是否托管为 git submodule
 #     layer: "bff"                                       # frontend | bff | backend
 
 related_repositories:
