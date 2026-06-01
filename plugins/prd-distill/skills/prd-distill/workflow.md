@@ -350,8 +350,8 @@ subagent 启动后**先 cd 到 `repos/{repo}/`**（团队仓内的 submodule 工
 | Step 3 Requirement IR | **跳过**（主 agent 已生成 `requirement-ir.yaml`） |
 | Step 4 Code Search & Layer Impact | **正常执行**，可用 rg/glob |
 | Step 5 Contract Delta | **正常执行**，但 `producer/consumers` 仅基于本仓 03-contracts |
-| Step 6 Report Confirmation | **正常执行** |
-| Step 7 Report 生成 | **正常执行** |
+| Step 6 Report | **正常执行**（生成 per-repo 的 report.md 摘要片段） |
+| Step 7 Report Review Gate | **跳过**（review gate 由主 agent 在聚合后的团队 report.md 上统一执行） |
 | Step 8 Plan | **跳过**（plan 由主 agent 统一生成） |
 | Step 9 Readiness | **跳过** |
 | Step 10 Reference Backflow | **跳过**（建议留给主 agent 聚合后统一处理） |
