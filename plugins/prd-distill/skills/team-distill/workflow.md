@@ -62,59 +62,67 @@ not_involved_repos:
 
 漏判兜底：Step 7.5 cross-align 阶段如果发现 `consumer_orphan`，在 §9.5 提示"疑似漏 fan-out 仓"。
 
-## Step 4：Code Search & Layer Impact（团队模式）
+## Step 4-7：Fan-out 到 subagent
 
-### 4.2 Graph Context（从 Reference 读取）
+主 agent 不再亲自跑 Step 4-7。对 `Step 3.5` 输出的每个 `involved_repos[i]`，并行 dispatch 一个 subagent。
 
-**禁止执行 rg/glob 命令** — 团队仓没有源码。
+### 4-7.A 启动 subagent
 
-对每个 REQ 的扫描流程：
+主 agent 用 `Agent` 工具调用，subagent_type=`general-purpose`，prompt 模板如下（**字面量必须保留**，特别是 `single-repo subagent 模式` 这个标志短语）：
 
-1. 读取各仓 `references/{repo}/01-codebase.yaml` 的模块/枚举/实体，匹配 PRD 相关内容。
-2. 对每个 REQ，匹配涉及的仓库和角色（从 03-contracts 的 producer/consumer 关系推断）。
-3. 需要契约细节时，读 `references/{repo}/03-contracts.yaml`。
-4. 需要路由信息时，读 `references/{repo}/04-routing-playbooks.yaml`。
+```
+你正在 /team-distill 的 fan-out 阶段，负责仓库：{repo}。
 
-自动识别涉及仓库：将 PRD requirement 的关键词与各仓的 04-routing-playbooks 和 01-codebase 模块名匹配，确定每个 REQ 涉及哪些仓库及角色（producer/consumer/middleware）。
+工作目录（CWD 启动后切换）：repos/{repo}/   ← 团队仓内的 submodule，真实源码
+参考资料：<团队仓根>/references/{repo}/      ← 该仓 reference
 
-GCTX entry 标记 `source: "team_reference"`，附带 `repo` 字段。
+输入产物路径（相对团队仓根，绝对路径请用 <团队仓根> 开头）：
+- _prd-tools/distill/{slug}/_ingest/prd.md
+- _prd-tools/distill/{slug}/context/requirement-ir.yaml
+- 你被识别为：role={producer|consumer|middleware}（hint，可推翻）
 
-### 4.3 Layer Impact 生成
+任务：调用 superpowers:prd-distill skill，按 "single-repo subagent 模式" 跑 Step 4-7
+（详见 prd-distill/workflow.md 末尾"附：single-repo subagent 模式"）。
 
-4 层 IMP 从各仓 reference 填充。每层的 `code_anchors` 指向对应仓库的 reference 文件路径。
+**禁止跑 Step 1-3 与 Step 8-11**。
 
-confidence 规则：
-- `medium`（默认，未直接验证源码）
-- `high`（被多个仓库 reference 交叉验证时）
+输出路径（相对团队仓根）：
+_prd-tools/distill/{slug}/per-repo/{repo}/
 
-### 4.5 Context Pack
+成功时返回 JSON：
+{ "repo": "{repo}", "status": "ok", "output_dir": "_prd-tools/distill/{slug}/per-repo/{repo}/", "summary": "..." }
 
-从 `references/{repo}/index/` 加载多仓 index：
-
-```bash
-python3 .prd-tools/scripts/context-pack.py \
-  --distill _prd-tools/distill/<slug> \
-  --team-references references \
-  --out _prd-tools/distill/<slug>/context/context-pack.md
+失败时返回 JSON 并写 _failure.json：
+{ "repo": "{repo}", "status": "failed", "errors": [...] }
 ```
 
-## Step 5：Contract Delta（团队模式）
+并行规则：
+- 所有 subagent 同时启动（不分批）
+- 等所有 subagent 返回后（barrier），再进入 Step 7.5
 
-跨仓视角：
-- 从各仓 `references/{repo}/03-contracts.yaml` 读取 producer/consumer 信息，构建跨仓契约全景。
-- consumer 调用的 endpoint 在其他仓声明为 producer → 标记 cross_repo 契约，`alignment_status: needs_confirmation`。
-- 每条 delta 的 `consumers[]` 跨仓填充。
+### 4-7.B 失败处理
 
-## Step 6-7：Report（团队模式）
+| 情况 | 主 agent 动作 |
+|------|--------------|
+| `repos/{repo}/` 不存在或 submodule 未 init | 跳过 fan-out，加入 `unavailable_repos[]`，原因 `submodule_uninitialized` |
+| `repos/{repo}` HEAD ≠ `references/{repo}` 的 `git_head` | 仍然 fan-out，但在 §9.{repo} 顶部加 `head_drift: source=<sha1> reference=<sha2>` |
+| subagent 返回 `status: failed` 或超时 | 不重试，加入 `unavailable_repos[]`，原因 `subagent_failed` |
+| subagent 返回 `status: ok` 但缺关键产物（report.md / contract-delta.yaml） | 视为 partial，加入 `partial_repos[]`，confidence 降级 |
 
-report.md §9 强制 5 个子节：
-- §9.1 Frontend：前端层 IMP 和契约
-- §9.2 BFF：BFF 层 IMP 和契约
-- §9.3 Backend：后端层 IMP 和契约
-- §9.4 External：外部系统影响
-- §9.5 跨层对齐风险：`consumers - checked_by` 不为空 / `alignment_status: blocked` 等
+### 4-7.C 主 agent 不做的事
 
-Report Review Gate 同单仓模式。
+- 不读 `repos/{repo}/` 任何源码（这是 subagent 的事）
+- 不为 subagent 复审 layer-impact / contract-delta（subagent 自己出，主 agent 只做跨仓聚合）
+- 不重试任何 subagent
+
+### 4-7.D 输出验收
+
+每个 `involved_repos[i]` 完成后，主 agent 校验 `per-repo/{repo}/` 至少包含：
+- `report.md`（非空）
+- `context/layer-impact.yaml`（非空）
+- `context/contract-delta.yaml`（可空，但文件需存在；空时记录 `no_contract_changes: true`）
+
+缺少则降级到 `partial_repos[]`。
 
 ## Step 8：Plan（团队模式）
 
