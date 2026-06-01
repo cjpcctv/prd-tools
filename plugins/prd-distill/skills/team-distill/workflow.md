@@ -1,23 +1,64 @@
 # team-distill 工作流
 
-> Step 1-3（PRD Ingestion、Evidence、Requirement IR）与单仓模式相同，详见 `skills/prd-distill/workflow.md`。
-> 本文件只描述团队模式与单仓的差异步骤。
+> **架构**：主 agent 编排 + subagent 并行蒸馏 + 主 agent 聚合（fan-out/fan-in）。spec 见 [docs/superpowers/specs/2026-06-01-team-distill-fanout-design.md](../../../../docs/superpowers/specs/2026-06-01-team-distill-fanout-design.md)。
+>
+> Step 1-3（PRD Ingestion / Evidence / Requirement IR）由**主 agent**执行，与单仓模式相同；详见 [skills/prd-distill/workflow.md](../../prd-distill/skills/prd-distill/workflow.md)。
+> Step 4-7 由 **subagent fan-out** 执行（每仓一个 subagent，使用 prd-distill 的 "single-repo subagent 模式"）。
+> Step 7.5 / 7.6 / 8 / 9-11 由**主 agent**聚合。
 
 ## 目标
 
-面向多仓库团队的 PRD 蒸馏：从各仓库 reference 原样副本生成跨仓影响分析和分仓库开发计划。
+面向多仓库团队的 PRD 蒸馏：
 
-前置：`project-profile.yaml` 含 `layer: "team-common"` 或 `references/` 目录存在。
+1. 主 agent 在团队仓根解析 PRD、生成 requirement-ir、识别涉及仓
+2. 对每个涉及仓 fan-out 一个 subagent，subagent 在 `repos/{repo}/` 源码上跑 Step 4-7
+3. 主 agent 聚合各仓产物，跨仓对齐契约，生成团队 report + team-plan + sub-plans
+
+前置：`project-profile.yaml` 含 `layer: "team-common"` 且 `team_repos[]` 每条配置了 `source_path` 与 `submodule: true`，且团队仓根有 `references/{repo}/` 与 `repos/{repo}/`（submodule 已 init）。
 
 ---
 
-## Step 1-3：同单仓
+## Step 1-3：主 agent 一次性完成
 
-PRD Ingestion → Evidence → Requirement IR，流程同 `skills/prd-distill/workflow.md`。
+PRD Ingestion → Evidence → Requirement IR，流程同 [prd-distill/workflow.md](../../prd-distill/skills/prd-distill/workflow.md)。
 
-额外消费：
-- 各仓 `references/{repo}/05-domain.yaml`：术语，用于 requirement-ir 术语对齐。
-- 各仓 `references/{repo}/02-coding-rules.yaml`：fatal 规则，在 requirement-ir 中标记相关规则。
+额外消费（同旧版）：
+- 各仓 `references/{repo}/05-domain.yaml`：术语，用于 requirement-ir 术语对齐
+- 各仓 `references/{repo}/02-coding-rules.yaml`：fatal 规则
+
+产物落到团队仓根的 `_prd-tools/distill/{slug}/`：
+- `_ingest/prd.md`、`_ingest/document.md`、`_ingest/document-structure.json`
+- `context/requirement-ir.yaml`
+- `evidence/EV-*.yaml`
+
+## Step 3.5：涉及仓识别（新增，主 agent）
+
+输入：`requirement-ir.yaml` + 各仓 `references/{repo}/{01-codebase, 03-contracts, 04-routing-playbooks}.yaml`
+
+算法（启发式，确定性）：
+
+1. 对每个 REQ 提取关键词集合：实体名、动作名、路由片段
+2. 与各仓 `01-codebase.yaml` 的 modules/entities 名称匹配 → 命中标记该仓相关
+3. 与各仓 `04-routing-playbooks.yaml` 的 routes/handoffs 匹配 → 命中标记该仓相关
+4. 角色推断：依据各仓 `03-contracts.yaml` 的 `producer`/`consumers[]` 字段
+5. 同一仓多 REQ 命中合并
+
+产物：`context/involved-repos.yaml`
+
+```yaml
+schema_version: "1"
+involved_repos:
+  - repo: dive-bff
+    role: middleware                    # producer | consumer | middleware
+    matched_via: ["module:order", "route:/api/v1/order"]
+    confidence: high                    # high | medium
+    matched_reqs: ["REQ-001", "REQ-003"]
+not_involved_repos:
+  - repo: dive-be-legacy
+    reason: "无关键词命中"
+```
+
+漏判兜底：Step 7.5 cross-align 阶段如果发现 `consumer_orphan`，在 §9.5 提示"疑似漏 fan-out 仓"。
 
 ## Step 4：Code Search & Layer Impact（团队模式）
 
