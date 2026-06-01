@@ -78,19 +78,25 @@ def _read_involved_repos(base):
 def _detect_contract_changes(base):
     """判断 PRD 是否涉及契约改动。
 
-    若聚合后的 context/contract-delta.yaml 中存在任何 change_type != NO_CHANGE 的 deltas → True。
-    无 contract-delta.yaml 或全是 NO_CHANGE → False。
+    优先看团队聚合 context/contract-delta.yaml；若不存在或全 NO_CHANGE，
+    回退扫描 per-repo/{repo}/context/contract-delta.yaml 任一仓有变更即 True。
     """
-    p = base / 'context' / 'contract-delta.yaml'
-    if not p.is_file():
-        return False
-    try:
-        data = yaml.safe_load(p.read_text(encoding='utf-8')) or {}
-    except Exception:
-        return False
-    for d in (data.get('deltas') or []):
-        if d.get('change_type', 'NO_CHANGE') != 'NO_CHANGE':
-            return True
+    candidates = [base / 'context' / 'contract-delta.yaml']
+    per_repo_dir = base / 'per-repo'
+    if per_repo_dir.is_dir():
+        for child in sorted(per_repo_dir.iterdir()):
+            if child.is_dir():
+                candidates.append(child / 'context' / 'contract-delta.yaml')
+    for p in candidates:
+        if not p.is_file():
+            continue
+        try:
+            data = yaml.safe_load(p.read_text(encoding='utf-8')) or {}
+        except Exception:
+            continue
+        for d in (data.get('deltas') or []):
+            if d.get('change_type', 'NO_CHANGE') != 'NO_CHANGE':
+                return True
     return False
 
 
@@ -409,6 +415,9 @@ def print_distill_quality(results):
     ]
     if is_team:
         checks.append(('team_sub_plans', 'Team sub-plans'))
+        checks.append(('per_repo_completeness', 'Per-repo completeness'))
+        checks.append(('cross_align', 'Cross-repo contract alignment'))
+        checks.append(('team_section_9', 'Report §9 fan-out subsections'))
     checks += [('prd_coverage', 'PRD coverage (fidelity)')]
     for key, label in checks:
         print_check_line(label, results[key])
