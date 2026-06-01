@@ -18,10 +18,11 @@
    - 将整个 `reference/` 目录内容复制到 `references/{repo-name}/`
    - 包括 01-05 YAML、`project-profile.yaml`、`index/` 目录
 3. **HEAD 一致性校验**（团队仓含 submodule 时）：
-   - 若 `<团队仓>/repos/{repo}/` 存在（submodule 已 init），运行 `git -C repos/{repo} rev-parse HEAD` 取实际 source HEAD
+   - 前置：`references/{repo}/project-profile.yaml` 中存在 `git_head` 字段。当前 `/reference` 默认不写入此字段；缺失时**整段跳过**该仓的校验，不视为不一致。
+   - 若 `repos/{repo}/` 存在（submodule 已 init）且 reference 含 `git_head`：运行 `git -C repos/{repo} rev-parse HEAD` 取实际 source HEAD
    - 与 `references/{repo}/project-profile.yaml` 的 `git_head` 字段比对
-   - **不一致只发警告，不阻断收集**：把该仓加入 `head_mismatch[]` 摘要字段
-   - 团队仓没有 `repos/` 或某仓未 init submodule 时跳过此校验
+   - **不一致只发警告，不阻断收集**：把该仓加入 `head_mismatch[]` 摘要字段，每条形如 `{repo: <repo>, source_head: <sha1>, reference_head: <sha2>}`
+   - 团队仓没有 `repos/`、某仓未 init submodule、或 reference 未写 `git_head` 时跳过此校验
 4. **输出摘要**：哪些仓库收集成功、哪些跳过（路径不存在或 reference 不完整）、哪些 HEAD 不一致（`head_mismatch[]`）
 
 **目录结构**：
