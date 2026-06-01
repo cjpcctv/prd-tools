@@ -17,7 +17,12 @@
    - 验证 `local_path/_prd-tools/reference/` 目录存在
    - 将整个 `reference/` 目录内容复制到 `references/{repo-name}/`
    - 包括 01-05 YAML、`project-profile.yaml`、`index/` 目录
-3. **输出摘要**：哪些仓库收集成功、哪些跳过（路径不存在或 reference 不完整）
+3. **HEAD 一致性校验**（团队仓含 submodule 时）：
+   - 若 `<团队仓>/repos/{repo}/` 存在（submodule 已 init），运行 `git -C repos/{repo} rev-parse HEAD` 取实际 source HEAD
+   - 与 `references/{repo}/project-profile.yaml` 的 `git_head` 字段比对
+   - **不一致只发警告，不阻断收集**：把该仓加入 `head_mismatch[]` 摘要字段
+   - 团队仓没有 `repos/` 或某仓未 init submodule 时跳过此校验
+4. **输出摘要**：哪些仓库收集成功、哪些跳过（路径不存在或 reference 不完整）、哪些 HEAD 不一致（`head_mismatch[]`）
 
 **目录结构**：
 
@@ -44,3 +49,4 @@ references/
 1. **原样复制**：不修改、不合并、不过滤成员仓库的 reference 内容
 2. **增量更新**：每次收集覆盖已有目录，保持与成员仓库最新状态一致
 3. **跳过不可达仓库**：`local_path` 不存在时跳过并在摘要中标记，不中断整体收集
+4. **不主动 submodule update**：team-reference 不替用户跑 `git submodule update`，源码同步是用户责任；本步骤只做"提示"，不擅自动 git。
