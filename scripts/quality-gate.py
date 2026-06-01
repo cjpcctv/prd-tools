@@ -55,6 +55,45 @@ def detect_team_mode(repo_root):
     return False, []
 
 
+def _read_involved_repos(base):
+    """读取 context/involved-repos.yaml，返回 involved_repos 仓名列表（按 Step 3.5 产出）。
+
+    若文件不存在或解析失败，返回 None；调用者会回落到 member_repos。
+    """
+    p = base / 'context' / 'involved-repos.yaml'
+    if not p.is_file():
+        return None
+    try:
+        data = yaml.safe_load(p.read_text(encoding='utf-8')) or {}
+    except Exception:
+        return None
+    repos = []
+    for entry in (data.get('involved_repos') or []):
+        repo = entry.get('repo') if isinstance(entry, dict) else None
+        if repo:
+            repos.append(repo)
+    return repos or None
+
+
+def _detect_contract_changes(base):
+    """判断 PRD 是否涉及契约改动。
+
+    若聚合后的 context/contract-delta.yaml 中存在任何 change_type != NO_CHANGE 的 deltas → True。
+    无 contract-delta.yaml 或全是 NO_CHANGE → False。
+    """
+    p = base / 'context' / 'contract-delta.yaml'
+    if not p.is_file():
+        return False
+    try:
+        data = yaml.safe_load(p.read_text(encoding='utf-8')) or {}
+    except Exception:
+        return False
+    for d in (data.get('deltas') or []):
+        if d.get('change_type', 'NO_CHANGE') != 'NO_CHANGE':
+            return True
+    return False
+
+
 def compute_exit_code(results):
     for val in results.values():
         if isinstance(val, dict) and val.get('status') == 'fail':
@@ -346,6 +385,12 @@ def run_distill_quality(base, repo_root):
     }
     if is_team:
         results['team_sub_plans'] = _dq_team_sub_plans(base, member_repos)
+        # ── 新增 fan-out/fan-in 检查 ──
+        involved_repos = _read_involved_repos(base) or member_repos
+        results['per_repo_completeness'] = _dq_per_repo_completeness(base, involved_repos)
+        has_contract_changes = _detect_contract_changes(base)
+        results['cross_align'] = _dq_cross_align(base, has_contract_changes)
+        results['team_section_9'] = _dq_team_section_9(base, involved_repos)
     results['prd_coverage'] = _dq_prd_coverage_simple(base)
     return results
 
