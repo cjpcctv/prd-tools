@@ -2,7 +2,7 @@
   <workflow>reference</workflow>
   <current_step>1</current_step>
   <allowed_inputs>user-provided PRD paths, historical samples</allowed_inputs>
-  <must_not_read_by_default>_prd-tools/reference/ (does not exist yet)</must_not_read_by_default>
+  <must_not_read_by_default>_prd-tools/reference/ (when mode=F; allowed when mode=D)</must_not_read_by_default>
   <must_not_produce>_prd-tools/reference/01-codebase.yaml</must_not_produce>
 </workflow_state>
 
@@ -30,6 +30,17 @@
 3. 如不存在或文件不足，向用户收集补充材料（手动提供路径或粘贴）。
 4. 将自动发现的文件展示给用户确认，用户可以增删或替换。
 
+## 参数
+
+```yaml
+mode: F | D            # F=首次构建前（默认），D=已建 reference 后增量补样例
+branch: <branch-name>  # Mode D 必填，Mode F 可选
+base_ref: <ref>        # 可选；缺省时按以下顺序推断：
+                       #   1. project-profile.yaml 的 default_branch 字段
+                       #   2. git symbolic-ref refs/remotes/origin/HEAD
+                       #   3. fallback: main → master
+```
+
 ## 输入
 
 优先使用 `prd-docs/` 中的自动发现文件，不足时向用户收集 1-3 组历史样例：
@@ -47,6 +58,14 @@
 
 1. 读取 PRD 和技术文档。
 2. 在用户提供的 repo 范围内检查 git branch/diff。
+
+   Mode D 时，步骤 2 替换为：
+   - 2a. `git merge-base <branch> <default_branch>` 推断 base_ref（如未显式提供；推断顺序见上方 `## 参数` 的 `base_ref` 注释）
+   - 2b. `git diff <base_ref>..<branch> --stat` 拿 files_changed
+   - 2c. `git diff <base_ref>..<branch> -- <files>` 拿关键文件 diff 内容
+   - 2d. `git log <base_ref>..<branch> --pretty` 拿 commit messages 进 evidence
+   - 2e. files_changed 中每条标 `evidence: "git@<branch>:<file>"`
+
 3. 将 PRD 描述映射到实际变更文件和契约面。
 4. 提取术语、路由信号、契约面、playbook 步骤、QA 用例、坑点和高风险文件。
 5. 不确定就记录不确定，不猜测。
@@ -81,6 +100,19 @@ cross_sample_patterns:
   playbooks: []
   risks: []
 ```
+
+### 写入语义
+
+- **Mode F**：覆盖写 `_prd-tools/build/context-enrichment.yaml`。
+- **Mode D**：
+  1. 读取现有 `_prd-tools/build/context-enrichment.yaml`。
+  2. 用 `(prd_path_hash, branch)` 作为去重 key（`prd_path_hash` = hash of sorted `prd_paths` values in the sample）。
+  3. 已存在的 sample → 整体覆盖那一条；新 sample → append 到 `samples[]` 并自动分配下一个 `SAMPLE-NNN`。
+  4. 重算 `cross_sample_patterns`（基于全量 samples）。
+  5. 更新 `collected_at` 为当前时间。
+  6. 旧 sample 不动。
+
+完成判定（"至少 1 个 sample 含 lessons[]"）对 Mode D 只校验**新增的那个样例**。
 
 ## 映射到 Reference v4.0
 

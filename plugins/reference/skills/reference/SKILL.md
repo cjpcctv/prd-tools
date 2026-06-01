@@ -33,6 +33,7 @@ description: 为前端、BFF、后端通用的 PRD-to-code 工作流构建、更
 | B2 健康检查 | 是否过期/缺证据 | `_prd-tools/build/health-check.yaml` |
 | C 质量门控 | 证据/契约闭环/幻觉 | `_prd-tools/build/quality-report.yaml` |
 | E 反馈回流 | prd-distill 输出回收 | `_prd-tools/build/feedback-report.yaml` |
+| D 增量样例补充 | 已建 reference + 拿到新历史 PRD/分支 | 更新后的 `_prd-tools/reference/` + `_prd-tools/build/feedback-report.yaml` |
 
 团队模式（Mode T 收集）详见 `/team-reference`。
 

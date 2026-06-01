@@ -255,7 +255,7 @@ _prd-tools/reference/index/
 
 用户确认后再修改 reference，并更新 `last_verified`。
 
-## Mode → Phase 映射（B / B2 / C / E 可执行清单）
+## Mode → Phase 映射（B / B2 / C / D / E 可执行清单）
 
 `F` 和 `A` 走完整 Phase 1-5。其他模式按下表只跑必要 Phase，避免重复全量构建：
 
@@ -267,10 +267,11 @@ _prd-tools/reference/index/
 | **B2** 健康检查 | Phase 4 + last_verified 检查 + index 与源码一致性 | Phase 1/2/3/5（不重建） | `build/health-check.yaml`（含 stale_entries / missing_evidence / index_drift） | 报告 status: pass/warning/fail |
 | **C** 质量门控 | Phase 4 only | Phase 1/2/3/5（信任已有产物） | `build/quality-report.yaml` | fatal_findings 为空 |
 | **E** 反馈回流 | Phase 6 | 其他全部 | `build/feedback-report.yaml` + 受影响的 `reference/*.yaml`（仅有证据的建议被应用） | 所有 suggestion 已 dispositioned (apply / reject / defer) |
+| **D** 增量样例补充 | Phase 1（--append --branch=<name>）→ Phase 6（--auto-apply-confidence=high） | Phase 2/3/4/5 | `build/context-enrichment.yaml`（追加新样例）+ 受影响 `reference/*.yaml` + `build/feedback-report.yaml` | 所有 suggestion 已 dispositioned (applied / pending_review / rejected / already_present) |
 
 团队模式（Mode T 收集）详见 `/team-reference`。
 
-**Mode B/B2/C/E 共同规则**：
+**Mode B/B2/C/D/E 共同规则**：
 
 - 执行前必须读 `_prd-tools/build/reference-workflow-state.yaml`，确认上次完成态。
 - 不允许"顺手补全"非本模式应该动的文件（典型陷阱：Mode B2 只是检查健康，不能直接改 yaml；发现问题写到 health-check.yaml 让用户决定走 B 还是 A）。
