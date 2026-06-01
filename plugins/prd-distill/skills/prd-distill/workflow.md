@@ -325,3 +325,60 @@ python3 .prd-tools/scripts/quality-gate.py final \
 6. 完成后告知输出路径和最重要的阻塞/风险。
 7. report.md 和 plan.md 是主产物；query-plan、context-pack、final-quality-gate 是辅助层。
 8. reference 存在时必须消费。不存在时标记缺失并降低置信度。
+
+---
+
+## 附：single-repo subagent 模式（被 team-distill 调用时）
+
+当本 skill 被 `/team-distill` 主 agent 以 subagent 形式调用时（subagent 的提示中包含字面量 `single-repo subagent 模式`），按以下规则裁剪：
+
+### 输入
+
+主 agent 在 prompt 中已声明：
+- 团队仓相对路径：`_prd-tools/distill/{slug}/_ingest/prd.md`
+- 团队仓相对路径：`_prd-tools/distill/{slug}/context/requirement-ir.yaml`
+- 角色 hint：`role={producer|consumer|middleware}`
+
+subagent 启动后**先 cd 到 `repos/{repo}/`**（团队仓内的 submodule 工作树），CWD 即该成员仓源码根目录。`references/{repo}/` 在团队仓根的相对路径仍可读。
+
+### 跳过的步骤
+
+| 步骤 | 处理 |
+|------|------|
+| Step 1 PRD Ingestion | **跳过**（主 agent 已生成 `_ingest/prd.md`） |
+| Step 2 Evidence | **跳过**（主 agent 已生成 evidence） |
+| Step 3 Requirement IR | **跳过**（主 agent 已生成 `requirement-ir.yaml`） |
+| Step 4 Code Search & Layer Impact | **正常执行**，可用 rg/glob |
+| Step 5 Contract Delta | **正常执行**，但 `producer/consumers` 仅基于本仓 03-contracts |
+| Step 6 Report Confirmation | **正常执行** |
+| Step 7 Report 生成 | **正常执行** |
+| Step 8 Plan | **跳过**（plan 由主 agent 统一生成） |
+| Step 9 Readiness | **跳过** |
+| Step 10 Reference Backflow | **跳过**（建议留给主 agent 聚合后统一处理） |
+| Step 11 Quality Gate | **跳过**（团队 quality-gate 在主 agent 末段统一跑） |
+
+### 输出路径改写
+
+所有产物根目录改为：`_prd-tools/distill/{slug}/per-repo/{repo}/`（路径相对**团队仓根**，subagent 需写绝对路径或返回团队仓根）。
+
+具体落点：
+- `_prd-tools/distill/{slug}/per-repo/{repo}/report.md`
+- `_prd-tools/distill/{slug}/per-repo/{repo}/context/{layer-impact, contract-delta, graph-context, report-confirmation}.yaml`
+- `_prd-tools/distill/{slug}/per-repo/{repo}/evidence/`
+
+### 失败处理
+
+任何 step 失败时，**不重试**，写入 `_prd-tools/distill/{slug}/per-repo/{repo}/_failure.json`：
+
+```json
+{ "repo": "<repo>", "failed_at_step": "Step 4", "error": "<message>", "partial_outputs": ["report.md"] }
+```
+
+并在 subagent 返回值中标记 `status: failed`，由主 agent 把该仓标记为 unavailable。
+
+### 边界（必须遵守）
+
+- ❌ 不读 `references/{other-repo}/`，不读 `repos/{other-repo}/`
+- ❌ 不生成 plan、readiness、quality-gate 产物
+- ❌ 不做跨仓推理（producer 是否被某仓 consumer、handoff 闭环、owner 缺位 — 全留给主 agent）
+- ✅ contract-delta 中 `producer` 字段只填本仓视角；跨仓信息留空，由主 agent 补
