@@ -220,6 +220,44 @@ def _dq_team_sub_plans(base, member_repos):
             'sub_plans_found': found, 'sub_plans_missing': missing}
 
 
+def _dq_per_repo_completeness(base, involved_repos):
+    """检查 per-repo/{repo}/ 完整性。
+
+    每个 involved_repo 必须有 report.md（非空）和 context/{layer-impact, contract-delta}.yaml 文件存在。
+    若 _failure.json 存在则视为 unavailable，不计入缺失。
+    """
+    per_repo_dir = base / 'per-repo'
+    if not per_repo_dir.is_dir():
+        return {'status': 'fail', 'reason': 'per-repo/ 目录不存在', 'expected_repos': involved_repos}
+    incomplete, unavailable, complete = [], [], []
+    for repo in involved_repos:
+        d = per_repo_dir / repo
+        if (d / '_failure.json').is_file():
+            unavailable.append(repo)
+            continue
+        if not d.is_dir():
+            incomplete.append({'repo': repo, 'reason': 'missing_dir'})
+            continue
+        report = d / 'report.md'
+        li = d / 'context' / 'layer-impact.yaml'
+        cd = d / 'context' / 'contract-delta.yaml'
+        if not file_exists_nonempty(report):
+            incomplete.append({'repo': repo, 'reason': 'missing_report'})
+        elif not li.is_file():
+            incomplete.append({'repo': repo, 'reason': 'missing_layer_impact'})
+        elif not cd.is_file():
+            incomplete.append({'repo': repo, 'reason': 'missing_contract_delta'})
+        else:
+            complete.append(repo)
+    status = 'fail' if incomplete else ('warning' if unavailable else 'pass')
+    return {
+        'status': status,
+        'complete': complete,
+        'incomplete': incomplete,
+        'unavailable': unavailable,
+    }
+
+
 def _dq_prd_coverage_simple(base):
     coverage_path = base / 'context' / 'coverage-report.yaml'
     if coverage_path.is_file():
